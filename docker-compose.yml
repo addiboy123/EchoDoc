@@ -1,0 +1,50 @@
+services:
+  kokoro-web:
+    image: ghcr.io/eduardolat/kokoro-web:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - KW_SECRET_API_KEY=${KOKORO_API_KEY}
+    volumes:
+      - ./kokoro-cache:/kokoro/cache
+    restart: unless-stopped
+
+  backend:
+  
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_LIFETIME=${JWT_LIFETIME}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - KOKORO_BASE_URL=${KOKORO_BASE_URL}
+      - KOKORO_API_KEY=${KOKORO_API_KEY}
+      - KOKORO_TTS_VOICE=${KOKORO_TTS_VOICE}
+      - PORT=${PORT}
+    depends_on:
+      - kokoro-web
+    restart: unless-stopped
+
+  # --- ADDED FRONTEND SERVICE ---
+  frontend:
+    build:
+      context: ./frontend 
+      dockerfile: Dockerfile
+    ports:
+      # Exposes Vite's default port to your local machine
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:${PORT}
+      - VITE_DEV_SERVER_HOST=0.0.0.0
+      # --- ADD THESE CLOUDINARY VARIABLES ---
+      - VITE_CLOUDINARY_CLOUD_NAME=${VITE_CLOUDINARY_CLOUD_NAME}
+      - VITE_CLOUDINARY_UPLOAD_PRESET=${VITE_CLOUDINARY_UPLOAD_PRESET}
+    depends_on:
+      - backend
+    restart: unless-stopped

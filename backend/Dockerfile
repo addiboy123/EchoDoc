@@ -2,17 +2,14 @@ FROM node:lts-alpine3.21
 
 WORKDIR /app
 
-# Copy only package.json and package-lock.json first to leverage Docker cache
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+RUN npm install --only=production
 
-# Then copy the rest of the files
 COPY . .
 
-# Expose the port your app runs on (optional but helpful)
-EXPOSE 3000
+ARG PORT=3000
+EXPOSE ${PORT}
+ENV PORT=${PORT}
 
-# Start the application
 CMD ["npm", "start"]

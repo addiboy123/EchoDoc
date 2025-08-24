@@ -1,18 +1,27 @@
-FROM node:lts-alpine3.21
+# Stage 1: Build
+FROM node:lts-alpine3.21 as build
 
 WORKDIR /app
 
-# Copy only package.json and package-lock.json first to leverage Docker cache
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Then copy the rest of the files
 COPY . .
 
-# Expose the port your app runs on (optional but helpful)
-EXPOSE 5173
+# Build args for frontend envs
+ARG VITE_API_BASE_URL
+ARG VITE_CLOUDINARY_CLOUD_NAME
+ARG VITE_CLOUDINARY_UPLOAD_PRESET
 
-# Start the application
-CMD ["npm", "run", "dev"]
+# Expose them as envs during build
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_CLOUDINARY_CLOUD_NAME=$VITE_CLOUDINARY_CLOUD_NAME
+ENV VITE_CLOUDINARY_UPLOAD_PRESET=$VITE_CLOUDINARY_UPLOAD_PRESET
+
+RUN npm run build
+
+# Stage 2: Serve with nginx
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
